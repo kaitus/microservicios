@@ -42,7 +42,18 @@ public class ServiceProxyImpl implements ServiceProxy {
 
     @Override
     public void create(String collection, JsonObject object, Handler<AsyncResult<String>> handler) {
-
+        client.save(collection, object, result -> {
+            if (result.succeeded()) {
+                try {
+                    handler.handle(Future.succeededFuture(mapper.writeValueAsString(result.result())));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                    handler.handle(Future.failedFuture(e.getMessage()));
+                }
+            } else {
+                handler.handle(Future.failedFuture(result.cause()));
+            }
+        });
     }
 
     @Override

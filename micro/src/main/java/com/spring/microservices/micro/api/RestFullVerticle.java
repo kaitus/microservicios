@@ -10,6 +10,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 
 
 public class RestFullVerticle extends AbstractVerticle {
@@ -19,6 +20,9 @@ public class RestFullVerticle extends AbstractVerticle {
     @Override
     public void start(Future<Void> future) throws Exception {
         Router router = Router.router(vertx);
+        router.route().consumes("application/json");
+        router.route().produces("application/json");
+        router.route().handler(BodyHandler.create());
         router.get("/api/:collection").handler(this::findAllHandler);
         router.post("/api/:collection").handler(this::createHandler);
         vertx.createHttpServer()
@@ -46,13 +50,9 @@ public class RestFullVerticle extends AbstractVerticle {
     }
 
     private void reply(RoutingContext routingContext, DeliveryOptions options, JsonObject object) {
-        vertx.eventBus().<JsonObject>send(ServicesVerticle.class.getName(), object, options, messageAsyncResult -> {
+        vertx.eventBus().<String>send(ServicesVerticle.class.getName(), object, options, messageAsyncResult -> {
             if (messageAsyncResult.succeeded()) {
-                try {
-                    routingContext.response().end(mapper.writeValueAsString(messageAsyncResult.result()));
-                } catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
+                    routingContext.response().end(messageAsyncResult.result().body());
             } else {
                 routingContext.response().end(messageAsyncResult.cause().getMessage());
             }
